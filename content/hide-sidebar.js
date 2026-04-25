@@ -42,7 +42,13 @@
     }
     const id = stored[STORAGE_KEY];
     if (!id) return;
-    location.replace("/web/conversations/" + encodeURIComponent(id));
+    const target = "/web/conversations/" + encodeURIComponent(id);
+    // SPA-internal navigation: avoids a full reload, which is important inside
+    // Firefox Taskbar Tabs where the pinned start URL can get re-asserted on
+    // hard navigations. Angular's Router listens for popstate and will route
+    // to the new URL.
+    history.replaceState(history.state, "", target);
+    window.dispatchEvent(new PopStateEvent("popstate", { state: history.state }));
   };
 
   // Catch SPA navigations so the stored id stays current.
@@ -70,8 +76,8 @@
   };
 
   const ICON_SVG =
-    "<svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" aria-hidden=\"true\">" +
-    "<path fill=\"currentColor\" d=\"M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5Zm2 0v14h5V5H5Zm7 0v14h7V5h-7Z\"/>" +
+    "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\">" +
+    "<path fill=\"currentColor\" d=\"M9.29 6.71a1 1 0 0 0 0 1.41L13.17 12l-3.88 3.88a1 1 0 1 0 1.42 1.42l4.59-4.59a1 1 0 0 0 0-1.42L10.71 6.71a1 1 0 0 0-1.42 0Z\"/>" +
     "</svg>";
 
   const ensureButton = () => {

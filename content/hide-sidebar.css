@@ -5,14 +5,15 @@ html.gmw-sidebar-hidden [data-e2e-conversation-list] {
 
 .gmw-toggle-btn {
   position: fixed;
-  top: 8px;
-  left: 8px;
-  width: 36px;
-  height: 36px;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 44px;
   padding: 0;
   margin: 0;
   border: none;
-  border-radius: 50%;
+  border-radius: 0 22px 22px 0;
   background: var(--gm3-sys-color-surface-container, #e8eaed);
   color: var(--gm3-sys-color-on-surface, #1f1f1f);
   cursor: pointer;
@@ -20,11 +21,13 @@ html.gmw-sidebar-hidden [data-e2e-conversation-list] {
   align-items: center;
   justify-content: center;
   z-index: 2147483647;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  transition: background-color 0.15s ease, transform 0.15s ease;
+  box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.25);
+  transition: width 0.15s ease, background-color 0.15s ease;
 }
 
-.gmw-toggle-btn:hover {
+.gmw-toggle-btn:hover,
+.gmw-toggle-btn:focus-visible {
+  width: 22px;
   background: var(--gm3-sys-color-surface-container-high, #d4d6da);
 }
 
@@ -33,11 +36,13 @@ html.gmw-sidebar-hidden [data-e2e-conversation-list] {
   outline-offset: 2px;
 }
 
-.gmw-toggle-btn[aria-pressed="false"] svg {
-  transform: rotate(180deg);
-}
-
 .gmw-toggle-btn svg {
+  width: 14px;
+  height: 14px;
   pointer-events: none;
   transition: transform 0.15s ease;
+}
+
+.gmw-toggle-btn[aria-pressed="false"] svg {
+  transform: rotate(180deg);
 }
