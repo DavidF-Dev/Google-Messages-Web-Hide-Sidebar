@@ -6,10 +6,16 @@
   const STORAGE_KEY = "lastConversationId";
   const CONV_PATH_RE = /^\/web\/conversations\/([^/?#]+)/;
   const BARE_CONVERSATIONS_RE = /^\/web\/conversations\/?$/;
+  const ANGULAR_READY_SEL = "mw-main-nav, mw-app[ng-version]";
 
   let hidden = true;
 
   // ---- conversation persistence ---------------------------------------------------
+
+  let cachedRestoreId = null;
+  let cacheLoaded = false;
+  let urlReplaced = false;
+  let postBootPing = false;
 
   const currentConversationId = () => {
     const m = location.pathname.match(CONV_PATH_RE);
@@ -29,26 +35,48 @@
     }
   };
 
-  // If we landed on the bare conversation list URL, redirect to the most-recently
-  // viewed conversation. Async — the redirect fires after a microtask, but at
-  // document_start that's still before any meaningful render.
-  const tryRestoreConversation = async () => {
+  const pingRouter = () => {
+    // Tell Angular's Router to re-read location.pathname.
+    window.dispatchEvent(new PopStateEvent("popstate", { state: history.state }));
+  };
+
+  // If we're on the bare conversation list URL, swap the URL to the stored
+  // conversation id and ping Angular's Router. Re-entrant: safe to call from
+  // multiple init points; only the first valid call replaces the URL.
+  const tryRestoreNow = () => {
+    if (urlReplaced) return;
+    if (!cacheLoaded || !cachedRestoreId) return;
     if (!BARE_CONVERSATIONS_RE.test(location.pathname)) return;
-    let stored;
-    try {
-      stored = await browser.storage.local.get({ [STORAGE_KEY]: null });
-    } catch (_) {
-      return;
-    }
-    const id = stored[STORAGE_KEY];
-    if (!id) return;
-    const target = "/web/conversations/" + encodeURIComponent(id);
+    const target = "/web/conversations/" + encodeURIComponent(cachedRestoreId);
     // SPA-internal navigation: avoids a full reload, which is important inside
     // Firefox Taskbar Tabs where the pinned start URL can get re-asserted on
     // hard navigations. Angular's Router listens for popstate and will route
-    // to the new URL.
+    // to the new URL — but only once it's bootstrapped (see ensurePostBootPing).
     history.replaceState(history.state, "", target);
-    window.dispatchEvent(new PopStateEvent("popstate", { state: history.state }));
+    urlReplaced = true;
+    pingRouter();
+  };
+
+  // Cold-load rescue: on first cache-cold open, our early popstate may fire
+  // before Angular has attached its popstate listener. Re-dispatch popstate
+  // once Angular's bootstrap markers are visible in the DOM.
+  const ensurePostBootPing = () => {
+    if (postBootPing) return;
+    if (!urlReplaced) return;
+    if (!document.querySelector(ANGULAR_READY_SEL)) return;
+    postBootPing = true;
+    pingRouter();
+  };
+
+  const initRestore = async () => {
+    try {
+      const stored = await browser.storage.local.get({ [STORAGE_KEY]: null });
+      cachedRestoreId = stored[STORAGE_KEY] || null;
+    } catch (_) {
+      // ignore
+    }
+    cacheLoaded = true;
+    tryRestoreNow();
   };
 
   // Catch SPA navigations so the stored id stays current.
@@ -101,13 +129,15 @@
   // Hide as early as possible to avoid a flash of the sidebar before CSS+class apply.
   applyState();
 
-  tryRestoreConversation();
   installHistoryHooks();
+  initRestore();
   storeCurrent();
 
   const onReady = () => {
     ensureButton();
     applyState();
+    tryRestoreNow();
+    ensurePostBootPing();
 
     let pending = false;
     const obs = new MutationObserver(() => {
@@ -118,6 +148,8 @@
         try {
           ensureButton();
           applyState();
+          tryRestoreNow();
+          ensurePostBootPing();
         } catch (err) {
           console.warn("[gmw-hide-sidebar]", err);
         }
