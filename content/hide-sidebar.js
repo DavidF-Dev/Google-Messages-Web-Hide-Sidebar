@@ -127,10 +127,20 @@
     if (btn) btn.setAttribute("aria-pressed", String(hidden));
   };
 
-  const ICON_SVG =
-    "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\">" +
-    "<path fill=\"currentColor\" d=\"M9.29 6.71a1 1 0 0 0 0 1.41L13.17 12l-3.88 3.88a1 1 0 1 0 1.42 1.42l4.59-4.59a1 1 0 0 0 0-1.42L10.71 6.71a1 1 0 0 0-1.42 0Z\"/>" +
-    "</svg>";
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const ICON_PATH =
+    "M9.29 6.71a1 1 0 0 0 0 1.41L13.17 12l-3.88 3.88a1 1 0 1 0 1.42 1.42l4.59-4.59a1 1 0 0 0 0-1.42L10.71 6.71a1 1 0 0 0-1.42 0Z";
+
+  const buildIcon = () => {
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    const path = document.createElementNS(SVG_NS, "path");
+    path.setAttribute("fill", "currentColor");
+    path.setAttribute("d", ICON_PATH);
+    svg.appendChild(path);
+    return svg;
+  };
 
   const ensureButton = () => {
     if (!document.body) return;
@@ -140,7 +150,7 @@
     btn.type = "button";
     btn.setAttribute("aria-label", "Toggle conversation sidebar");
     btn.setAttribute("aria-pressed", String(hidden));
-    btn.innerHTML = ICON_SVG;
+    btn.appendChild(buildIcon());
     btn.addEventListener("click", () => {
       hidden = !hidden;
       applyState();
