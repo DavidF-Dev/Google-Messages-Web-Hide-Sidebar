@@ -1,0 +1,42 @@
+html.gmw-sidebar-hidden .gmw-sidebar-target {
+  display: none !important;
+}
+
+.gmw-toggle-btn {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--gm3-sys-color-surface-container, #e8eaed);
+  color: var(--gm3-sys-color-on-surface, #1f1f1f);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2147483647;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.gmw-toggle-btn:hover {
+  background: var(--gm3-sys-color-surface-container-high, #d4d6da);
+}
+
+.gmw-toggle-btn:focus-visible {
+  outline: 2px solid var(--gm3-sys-color-primary, #1a73e8);
+  outline-offset: 2px;
+}
+
+.gmw-toggle-btn[aria-pressed="false"] svg {
+  transform: rotate(180deg);
+}
+
+.gmw-toggle-btn svg {
+  pointer-events: none;
+  transition: transform 0.15s ease;
+}

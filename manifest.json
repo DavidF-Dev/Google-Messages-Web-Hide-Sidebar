@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Google Messages Web — Hide Sidebar",
+  "version": "0.1.0",
+  "description": "Hide the conversation sidebar on Google Messages Web, with a floating toggle button.",
+  "icons": {
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://messages.google.com/web/*"],
+      "js": ["content/hide-sidebar.js"],
+      "css": ["content/hide-sidebar.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": ["storage"],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "gmw-hide-sidebar@local",
+      "strict_min_version": "109.0"
+    }
+  }
+}
