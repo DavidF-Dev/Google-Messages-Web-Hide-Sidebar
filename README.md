@@ -2,6 +2,10 @@
 
 A small Firefox addon that hides the conversation sidebar on [Google Messages Web](https://messages.google.com/web/) and replaces it with a slim edge-attached toggle button.
 
+| Sidebar hidden (default) | Sidebar visible |
+| :---: | :---: |
+| ![Google Messages Web with the sidebar hidden and the toggle button on the left edge](screenshots/Screenshot_Sidebar_Closed.jpg) | ![Google Messages Web with the sidebar visible and the toggle button on the left edge](screenshots/Screenshot_Sidebar_Open.jpg) |
+
 ## What it does
 
 - Hides the entire left sidebar (conversation list **and** the *Start chat* button) on every page load — frees the full window width for the active conversation.
