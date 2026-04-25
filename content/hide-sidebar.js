@@ -16,6 +16,11 @@
   let cacheLoaded = false;
   let urlReplaced = false;
   let postBootPing = false;
+  let restoreTime = 0;
+  // Window in which a navigation back to the bare URL is treated as evidence
+  // that the stored conversation is invalid (deleted, no permission, etc.)
+  // rather than a deliberate user action.
+  const BOUNCE_WINDOW_MS = 5000;
 
   const currentConversationId = () => {
     const m = location.pathname.match(CONV_PATH_RE);
@@ -54,7 +59,23 @@
     // to the new URL — but only once it's bootstrapped (see ensurePostBootPing).
     history.replaceState(history.state, "", target);
     urlReplaced = true;
+    restoreTime = performance.now();
     pingRouter();
+  };
+
+  // If the SPA navigates back to the bare conversation URL shortly after we
+  // restored, the stored id is dead — clear it so future loads don't loop.
+  const detectBounce = () => {
+    if (!urlReplaced) return;
+    if (performance.now() - restoreTime > BOUNCE_WINDOW_MS) return;
+    if (!BARE_CONVERSATIONS_RE.test(location.pathname)) return;
+    try {
+      browser.storage.local.remove(STORAGE_KEY);
+    } catch (_) {
+      // ignore
+    }
+    cachedRestoreId = null;
+    urlReplaced = false;
   };
 
   // Cold-load rescue: on first cache-cold open, our early popstate may fire
@@ -86,13 +107,16 @@
       if (!orig || orig.__gmwHooked) continue;
       const wrapped = function (...args) {
         const ret = orig.apply(this, args);
-        try { storeCurrent(); } catch (_) {}
+        try { storeCurrent(); detectBounce(); } catch (_) {}
         return ret;
       };
       wrapped.__gmwHooked = true;
       history[name] = wrapped;
     }
-    window.addEventListener("popstate", storeCurrent);
+    window.addEventListener("popstate", () => {
+      storeCurrent();
+      detectBounce();
+    });
   };
 
   // ---- toggle button --------------------------------------------------------------
