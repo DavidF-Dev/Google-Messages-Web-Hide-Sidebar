@@ -12,7 +12,7 @@
       "matches": ["https://messages.google.com/web/*"],
       "js": ["content/hide-sidebar.js"],
       "css": ["content/hide-sidebar.css"],
-      "run_at": "document_idle"
+      "run_at": "document_start"
     }
   ],
   "permissions": ["storage"],

@@ -2,37 +2,66 @@
   if (!location.pathname.startsWith("/web/")) return;
 
   const HIDDEN_CLASS = "gmw-sidebar-hidden";
-  const TARGET_CLASS = "gmw-sidebar-target";
   const BUTTON_CLASS = "gmw-toggle-btn";
-  const STORAGE_KEY = "hidden";
-
-  // Defensive selector chain — Google Messages' DOM is not a public API and may shift.
-  // The first match wins. If none match, the script no-ops cleanly.
-  const SIDEBAR_SELECTORS = [
-    "mws-conversations-list",
-    "mws-conversation-list",
-    "mws-main-nav",
-    "nav[role=\"navigation\"]",
-  ];
+  const STORAGE_KEY = "lastConversationId";
+  const CONV_PATH_RE = /^\/web\/conversations\/([^/?#]+)/;
+  const BARE_CONVERSATIONS_RE = /^\/web\/conversations\/?$/;
 
   let hidden = true;
-  let initialized = false;
 
-  const findSidebar = () => {
-    for (const sel of SIDEBAR_SELECTORS) {
-      const el = document.querySelector(sel);
-      if (el) return el;
-    }
-    return null;
+  // ---- conversation persistence ---------------------------------------------------
+
+  const currentConversationId = () => {
+    const m = location.pathname.match(CONV_PATH_RE);
+    if (!m) return null;
+    const id = m[1];
+    if (!id || id === "new") return null;
+    return id;
   };
 
-  const tagSidebar = () => {
-    const el = findSidebar();
-    if (el && !el.classList.contains(TARGET_CLASS)) {
-      el.classList.add(TARGET_CLASS);
+  const storeCurrent = () => {
+    const id = currentConversationId();
+    if (!id) return;
+    try {
+      browser.storage.local.set({ [STORAGE_KEY]: id });
+    } catch (_) {
+      // storage may be unavailable in private browsing — ignore
     }
-    return el;
   };
+
+  // If we landed on the bare conversation list URL, redirect to the most-recently
+  // viewed conversation. Async — the redirect fires after a microtask, but at
+  // document_start that's still before any meaningful render.
+  const tryRestoreConversation = async () => {
+    if (!BARE_CONVERSATIONS_RE.test(location.pathname)) return;
+    let stored;
+    try {
+      stored = await browser.storage.local.get({ [STORAGE_KEY]: null });
+    } catch (_) {
+      return;
+    }
+    const id = stored[STORAGE_KEY];
+    if (!id) return;
+    location.replace("/web/conversations/" + encodeURIComponent(id));
+  };
+
+  // Catch SPA navigations so the stored id stays current.
+  const installHistoryHooks = () => {
+    for (const name of ["pushState", "replaceState"]) {
+      const orig = history[name];
+      if (!orig || orig.__gmwHooked) continue;
+      const wrapped = function (...args) {
+        const ret = orig.apply(this, args);
+        try { storeCurrent(); } catch (_) {}
+        return ret;
+      };
+      wrapped.__gmwHooked = true;
+      history[name] = wrapped;
+    }
+    window.addEventListener("popstate", storeCurrent);
+  };
+
+  // ---- toggle button --------------------------------------------------------------
 
   const applyState = () => {
     document.documentElement.classList.toggle(HIDDEN_CLASS, hidden);
@@ -54,53 +83,46 @@
     btn.setAttribute("aria-label", "Toggle conversation sidebar");
     btn.setAttribute("aria-pressed", String(hidden));
     btn.innerHTML = ICON_SVG;
-    btn.addEventListener("click", async () => {
+    btn.addEventListener("click", () => {
       hidden = !hidden;
       applyState();
-      try {
-        await browser.storage.local.set({ [STORAGE_KEY]: hidden });
-      } catch (_) {
-        // storage failures are non-fatal — the toggle still works for this session
-      }
     });
     document.body.appendChild(btn);
   };
 
-  const sync = () => {
-    try {
-      tagSidebar();
-      ensureButton();
-      applyState();
-    } catch (err) {
-      console.warn("[gmw-hide-sidebar] sync failed", err);
-    }
-  };
+  // ---- init -----------------------------------------------------------------------
 
-  const init = async () => {
-    if (initialized) return;
-    initialized = true;
-    try {
-      const stored = await browser.storage.local.get({ [STORAGE_KEY]: true });
-      hidden = !!stored[STORAGE_KEY];
-    } catch (_) {
-      hidden = true;
-    }
-    sync();
-  };
+  // Hide as early as possible to avoid a flash of the sidebar before CSS+class apply.
+  applyState();
 
-  init();
+  tryRestoreConversation();
+  installHistoryHooks();
+  storeCurrent();
 
-  // SPA-safe: re-tag the sidebar and re-inject the button after route changes
-  // or re-renders. Debounced via requestAnimationFrame so we don't run on
-  // every keystroke in the message composer.
-  let pending = false;
-  const obs = new MutationObserver(() => {
-    if (pending) return;
-    pending = true;
-    requestAnimationFrame(() => {
-      pending = false;
-      sync();
+  const onReady = () => {
+    ensureButton();
+    applyState();
+
+    let pending = false;
+    const obs = new MutationObserver(() => {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(() => {
+        pending = false;
+        try {
+          ensureButton();
+          applyState();
+        } catch (err) {
+          console.warn("[gmw-hide-sidebar]", err);
+        }
+      });
     });
-  });
-  obs.observe(document.documentElement, { childList: true, subtree: true });
+    obs.observe(document.documentElement, { childList: true, subtree: true });
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", onReady, { once: true });
+  } else {
+    onReady();
+  }
 })();

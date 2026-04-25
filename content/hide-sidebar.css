@@ -1,4 +1,5 @@
-html.gmw-sidebar-hidden .gmw-sidebar-target {
+html.gmw-sidebar-hidden mw-main-nav,
+html.gmw-sidebar-hidden [data-e2e-conversation-list] {
   display: none !important;
 }
 
