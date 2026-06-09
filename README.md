@@ -17,7 +17,7 @@ A small Firefox addon that hides the conversation sidebar on [Google Messages We
 
 ### From AMO
 
-Coming soon — see [Mozilla Add-ons](https://addons.mozilla.org/) once the listing is live.
+- https://addons.mozilla.org/en-US/firefox/addon/g-messages-web-hide-sidebar/
 
 ### Temporary install (development)
 
